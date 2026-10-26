@@ -50,8 +50,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function init() {
     bindEvents();
-    // Automatyczne pierwsze wyszukiwanie dla frazy początkowej
-    executeSearch();
+    if (queryInput.value.trim()) {
+      executeSearch();
+    } else {
+      renderWelcomeState();
+    }
+  }
+
+  function renderWelcomeState() {
+    resultsHeading.textContent = 'Wyszukiwarka ofert';
+    resultsSubheading.textContent = 'Wpisz szukaną frazę powyżej lub wybierz jeden z popularnych tagów';
+    offersContainer.innerHTML = `
+      <div class="welcome-card" style="grid-column: 1 / -1; text-align: center; padding: 4rem 1.5rem; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: var(--radius-lg); margin-top: 1rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔎</div>
+        <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">Wpisz czego szukasz</h3>
+        <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto 1.5rem; font-size: 0.95rem; line-height: 1.6;">
+          Podaj dowolną frazę (np. telefon, konsola, rower) w polu wyszukiwania powyżej, opcjonalnie podaj miasto i kliknij <strong>Przeszukaj serwisy</strong>, aby przeszukać OLX, Allegro, Allegro Lokalnie i Facebook Marketplace w jednym miejscu.
+        </p>
+      </div>
+    `;
   }
 
   function bindEvents() {
