@@ -313,7 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return `
       <article class="offer-card" data-id="${offer.id}">
         <div class="card-media">
-          <img src="${imgSrc}" alt="${escapeHTML(offer.title)}" loading="lazy" onerror="this.src='${placeholderImg}'">
+          <a href="${offer.url}" target="_blank" rel="noopener noreferrer" class="card-media-link" tabindex="-1">
+            <img src="${imgSrc}" alt="${escapeHTML(offer.title)}" loading="lazy" onerror="this.src='${placeholderImg}'">
+          </a>
           
           <!-- Dopisek skąd to wzięte (Badge źródła) -->
           <span class="card-source-badge src-badge ${badgeClass}">${offer.source}</span>
@@ -330,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <h3 class="card-title" title="${escapeHTML(offer.title)}">
-            ${highlightedTitle}
+            <a href="${offer.url}" target="_blank" rel="noopener noreferrer">${highlightedTitle}</a>
           </h3>
 
           <p class="card-desc">${escapeHTML(offer.description || 'Brak dodatkowego opisu oferty.')}</p>
