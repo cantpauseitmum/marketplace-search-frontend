@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarketplaceSearch - OLX, Allegro, Allegro Lokalnie, FB Marketplace</title>
+  <meta name="description" content="Scentralizowana wyszukiwarka ofert z OLX, Allegro, Allegro Lokalnie oraz Facebook Marketplace w jednym miejscu.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Górny nagłówek -->
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <circle cx="11" cy="11" r="3" stroke-dasharray="2 2"></circle>
+            </svg>
+          </div>
+          <div>
+            <h1 class="brand-title">Marketplace<span>Search</span></h1>
+            <p class="brand-subtitle">OLX • Allegro • Allegro Lokalnie • FB Marketplace</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="bookmarkedOnlyBtn" class="btn btn-ghost" title="Pokaż zapisane oferty">
+            <span class="icon">⭐</span>
+            <span class="btn-text">Zapisane (<span id="bookmarkCount">0</span>)</span>
+          </button>
+          <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span class="status-text">4 serwisy aktywne</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Główny panel wyszukiwania (Góra strony) -->
+    <section class="search-hero">
+      <div class="search-container">
+        <form id="searchForm" class="search-card">
+          <!-- Główny wiersz: fraza i miasto -->
+          <div class="search-grid">
+            <div class="input-group search-phrase-group">
+              <label for="queryInput">
+                <span class="label-icon">🔍</span> Czego szukasz?
+              </label>
+              <div class="input-wrapper">
+                <input 
+                  type="text" 
+                  id="queryInput" 
+                  name="q" 
+                  placeholder="np. Switch 2, iPhone 15, Rower gravel..." 
+                  autocomplete="off" 
+                  required
+                  value="Switch 2"
+                >
+                <button type="button" id="clearQueryBtn" class="clear-input-btn" title="Wyczyść" aria-label="Wyczyść">✕</button>
+              </div>
+            </div>
+
+            <div class="input-group location-group">
+              <label for="locationInput">
+                <span class="label-icon">📍</span> Lokalizacja / Miasto
+              </label>
+              <div class="input-wrapper">
+                <input 
+                  type="text" 
+                  id="locationInput" 
+                  name="location" 
+                  placeholder="np. Warszawa, Kraków (lub puste)" 
+                  value="Warszawa"
+                >
+              </div>
+            </div>
+
+            <div class="input-group radius-group">
+              <label for="radiusSelect">
+                <span class="label-icon">📏</span> Promień obszaru
+              </label>
+              <select id="radiusSelect" name="radius">
+                <option value="0">+0 km (Tylko miasto)</option>
+                <option value="10">+10 km</option>
+                <option value="25" selected>+25 km</option>
+                <option value="50">+50 km</option>
+                <option value="100">+100 km</option>
+                <option value="0">Cała Polska</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Opcje zaawansowane i filtry -->
+          <div class="search-options">
+            <!-- Wybór marketplace'ów -->
+            <div class="sources-selector">
+              <span class="options-label">Przeszukuj serwisy:</span>
+              <div class="source-chips">
+                <label class="source-chip chip-olx">
+                  <input type="checkbox" name="source" value="olx" checked>
+                  <span class="chip-label">
+                    <span class="badge-dot"></span> OLX
+                  </span>
+                </label>
+                <label class="source-chip chip-allegro">
+                  <input type="checkbox" name="source" value="allegro" checked>
+                  <span class="chip-label">
+                    <span class="badge-dot"></span> Allegro
+                  </span>
+                </label>
+                <label class="source-chip chip-allok">
+                  <input type="checkbox" name="source" value="allegro_lokalnie" checked>
+                  <span class="chip-label">
+                    <span class="badge-dot"></span> Allegro Lokalnie
+                  </span>
+                </label>
+                <label class="source-chip chip-fb">
+                  <input type="checkbox" name="source" value="facebook" checked>
+                  <span class="chip-label">
+                    <span class="badge-dot"></span> Facebook Marketplace
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Filtry cenowe i opis -->
+            <div class="extra-filters">
+              <div class="price-inputs">
+                <input type="number" id="minPriceInput" placeholder="Cena od zł" min="0">
+                <span class="price-separator">-</span>
+                <input type="number" id="maxPriceInput" placeholder="Cena do zł" min="0">
+              </div>
+
+              <label class="checkbox-toggle" title="Wyszukuj frazę w tytule LUB opisie ogłoszenia">
+                <input type="checkbox" id="inDescCheckbox" checked>
+                <span class="toggle-text">Szukaj również w opisie</span>
+              </label>
+            </div>
+
+            <!-- Przycisk wyszukiwania -->
+            <div class="submit-wrapper">
+              <button type="submit" id="searchSubmitBtn" class="btn btn-primary btn-search">
+                <span class="btn-spinner" id="searchSpinner"></span>
+                <span class="btn-icon">⚡</span>
+                <span class="btn-title">Przeszukaj serwisy</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Szybkie podpowiedzi -->
+          <div class="quick-tags">
+            <span class="tags-title">Popularne:</span>
+            <button type="button" class="tag-btn" data-query="Switch 2">Switch 2</button>
+            <button type="button" class="tag-btn" data-query="PlayStation 5">PlayStation 5</button>
+            <button type="button" class="tag-btn" data-query="iPhone 15 Pro">iPhone 15 Pro</button>
+            <button type="button" class="tag-btn" data-query="Steam Deck OLED">Steam Deck OLED</button>
+            <button type="button" class="tag-btn" data-query="MacBook Air M2">MacBook Air M2</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Pasek statusu poszczególnych marketplace'ów -->
+    <section class="marketplace-status-section" id="marketplaceStatusSection">
+      <div class="section-container">
+        <div class="marketplace-badges-bar">
+          <div class="source-status-card" id="status-olx">
+            <span class="src-badge badge-olx">OLX</span>
+            <span class="src-info">Gotowy do zapytań</span>
+          </div>
+          <div class="source-status-card" id="status-allegro">
+            <span class="src-badge badge-allegro">Allegro</span>
+            <span class="src-info">Gotowy do zapytań</span>
+          </div>
+          <div class="source-status-card" id="status-allegro-lokalnie">
+            <span class="src-badge badge-allok">Allegro Lokalnie</span>
+            <span class="src-info">Gotowy do zapytań</span>
+          </div>
+          <div class="source-status-card" id="status-facebook">
+            <span class="src-badge badge-facebook">FB Marketplace</span>
+            <span class="src-info">Gotowy do zapytań</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sekcja wyników -->
+    <main class="results-main">
+      <div class="section-container">
+        <!-- Belka kontrolna wyników -->
+        <div class="results-controls-bar">
+          <div class="results-summary">
+            <h2 id="resultsHeading" class="results-title">Ogłoszenia</h2>
+            <p id="resultsSubheading" class="results-meta">Wpisz frazę i kliknij przeszukaj</p>
+          </div>
+
+          <div class="results-actions">
+            <!-- Filtrowanie po wybranym źródle -->
+            <div class="source-filter-pills" id="sourceFilterPills">
+              <button class="pill active" data-source="ALL">Wszystkie (<span id="count-all">0</span>)</button>
+              <button class="pill pill-olx" data-source="OLX">OLX (<span id="count-olx">0</span>)</button>
+              <button class="pill pill-allegro" data-source="Allegro">Allegro (<span id="count-allegro">0</span>)</button>
+              <button class="pill pill-allok" data-source="Allegro Lokalnie">All. Lokalnie (<span id="count-allok">0</span>)</button>
+              <button class="pill pill-fb" data-source="Facebook Marketplace">Facebook (<span id="count-fb">0</span>)</button>
+            </div>
+
+            <!-- Sortowanie -->
+            <div class="sort-wrapper">
+              <label for="sortSelect">Sortuj:</label>
+              <select id="sortSelect">
+                <option value="newest">Najnowsze</option>
+                <option value="price_asc">Cena: rosnąco</option>
+                <option value="price_desc">Cena: malejąco</option>
+                <option value="relevance">Trafność (tytuł)</option>
+              </select>
+            </div>
+
+            <!-- Widok: Kafelki / Lista -->
+            <div class="view-switch">
+              <button id="viewGridBtn" class="view-btn active" title="Widok kafelków">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </button>
+              <button id="viewListBtn" class="view-btn" title="Widok listy">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kontener siatki ofert -->
+        <div id="offersContainer" class="offers-grid">
+          <!-- Oferty renderowane dynamicznie przez JS -->
+        </div>
+
+        <!-- Stan pusty / brak wyników -->
+        <div id="emptyState" class="empty-state hidden">
+          <div class="empty-icon">🔎</div>
+          <h3>Nie znaleziono ofert</h3>
+          <p>Spróbuj zmienić słowa kluczowe, zwiększyć promień poszukiwań lub zaznaczyć szukanie również w opisach.</p>
+        </div>
+
+        <!-- Stan ładowania -->
+        <div id="loadingState" class="loading-state hidden">
+          <div class="scanner-anim">
+            <div class="scanner-line"></div>
+          </div>
+          <p class="loading-text">Odpytywanie serwisów OLX, Allegro, Allegro Lokalnie i Facebook Marketplace...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Stopka -->
+    <footer class="app-footer">
+      <div class="footer-container">
+        <p>MarketplaceSearch • Aplikacja do agregacji ogłoszeń z polskich serwisów aukcyjnych</p>
+        <p class="footer-sub">OLX • Allegro • Allegro Lokalnie • Facebook Marketplace</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modal szczegółów oferty -->
+  <div id="offerModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="closeModalBtn" class="modal-close">&times;</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

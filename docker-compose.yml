@@ -1,0 +1,7 @@
+services:
+  frontend:
+    build: .
+    container_name: marketplace_search_frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped

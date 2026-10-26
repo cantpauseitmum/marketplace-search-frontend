@@ -1,0 +1,11 @@
+{
+  "name": "marketplace-search-frontend",
+  "version": "1.0.0",
+  "description": "Frontend SPA for MarketplaceSearch",
+  "scripts": {
+    "start": "python3 serve.py 3000",
+    "serve": "npx -y serve -l 3000"
+  },
+  "author": "Hubert Felicjaniak",
+  "license": "MIT"
+}
