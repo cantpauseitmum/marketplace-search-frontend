@@ -372,10 +372,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function highlightSearchWords(text, query) {
     if (!text || !query) return escapeHTML(text || '');
-    const words = query.trim().split(/\s+/).filter(Boolean);
+    const rawQuery = query.trim();
+    const words = rawQuery.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return escapeHTML(text || '');
+
     let escaped = escapeHTML(text);
+
+    // 1. Wyróżnienie pełnej frazy w całości (np. "Switch 2" jako jeden spójny blok)
+    const phrasePattern = words.map(escapeRegex).join('[\\s\\-_/.:,+]*');
+    const phraseRegex = new RegExp(`(?<![a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])(${phrasePattern})(?![a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])`, 'gi');
+    if (phraseRegex.test(escaped)) {
+      return escaped.replace(phraseRegex, '<mark>$1</mark>');
+    }
+
+    // 2. Wyróżnianie pojedynczych słów z zachowaniem granic (nigdy "2" wewnątrz "v2" lub "2024")
     words.forEach((w) => {
-      const regex = new RegExp(`(${escapeRegex(w)})`, 'gi');
+      const regex = new RegExp(`(?<![a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])(${escapeRegex(w)})(?![a-zA-Z0-9ąćęłńóśźżĄĆĘŁŃÓŚŹŻ])`, 'gi');
       escaped = escaped.replace(regex, '<mark>$1</mark>');
     });
     return escaped;
