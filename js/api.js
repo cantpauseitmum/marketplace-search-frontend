@@ -119,6 +119,71 @@ const API = {
     if (!response.ok) throw new Error('Błąd pobierania historii');
     return await response.json();
   },
+
+  /**
+   * Pobiera listę obserwowanych wyszukiwań (Watchlist)
+   */
+  async getWatchlist() {
+    const response = await fetch(`${this.baseUrl}/api/watchlist`);
+    if (!response.ok) throw new Error('Błąd pobierania listy obserwowanych');
+    return await response.json();
+  },
+
+  /**
+   * Dodaje nowe zapytanie do automatycznego przeszukiwania co 1h
+   */
+  async addToWatchlist(params) {
+    const response = await fetch(`${this.baseUrl}/api/watchlist`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Błąd dodawania do listy' }));
+      throw new Error(err.error || 'Nie udało się dodać do listy');
+    }
+    return await response.json();
+  },
+
+  /**
+   * Usuwa zapytanie z automatycznego monitorowania
+   */
+  async deleteFromWatchlist(watchedId) {
+    const response = await fetch(`${this.baseUrl}/api/watchlist/${watchedId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      // Fallback na POST .../delete
+      const fbResponse = await fetch(`${this.baseUrl}/api/watchlist/${watchedId}/delete`, {
+        method: 'POST',
+      });
+      if (!fbResponse.ok) throw new Error('Błąd usuwania z monitorowania');
+      return await fbResponse.json();
+    }
+    return await response.json();
+  },
+
+  /**
+   * Pobiera aktualne oferty dla wybranego zapytania z listy
+   */
+  async getWatchlistOffers(watchedId, { limit = 100, offset = 0 } = {}) {
+    const response = await fetch(`${this.baseUrl}/api/watchlist/${watchedId}/offers?limit=${limit}&offset=${offset}`);
+    if (!response.ok) throw new Error('Błąd pobierania ofert dla monitorowanego zapytania');
+    return await response.json();
+  },
+
+  /**
+   * Wymusza natychmiastowe odświeżenie zapytania z listy
+   */
+  async refreshWatchlist(watchedId) {
+    const response = await fetch(`${this.baseUrl}/api/watchlist/${watchedId}/refresh`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Błąd odświeżania');
+    return await response.json();
+  },
 };
 
 window.API = API;

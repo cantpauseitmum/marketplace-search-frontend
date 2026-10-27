@@ -30,6 +30,10 @@
         </div>
 
         <div class="header-actions">
+          <button id="watchlistNavBtn" class="btn btn-ghost" title="Pokaż listę monitorowanych ofert (auto co 1h)">
+            <span class="icon">📋</span>
+            <span class="btn-text">Monitorowane (<span id="watchlistCount">0</span>)</span>
+          </button>
           <button id="bookmarkedOnlyBtn" class="btn btn-ghost" title="Pokaż zapisane oferty">
             <span class="icon">⭐</span>
             <span class="btn-text">Zapisane (<span id="bookmarkCount">0</span>)</span>
@@ -144,12 +148,16 @@
               </label>
             </div>
 
-            <!-- Przycisk wyszukiwania -->
-            <div class="submit-wrapper">
-              <button type="submit" id="searchSubmitBtn" class="btn btn-primary btn-search">
+            <!-- Przyciski akcji: Wyszukiwanie jednorazowe oraz dodanie do listy automatycznej -->
+            <div class="submit-wrapper form-actions-row">
+              <button type="submit" id="searchSubmitBtn" class="btn btn-primary btn-search" title="Wykonaj natychmiastowe jednorazowe wyszukiwanie">
                 <span class="btn-spinner" id="searchSpinner"></span>
                 <span class="btn-icon">⚡</span>
                 <span class="btn-title">Przeszukaj serwisy</span>
+              </button>
+              <button type="button" id="addToWatchlistBtn" class="btn btn-secondary btn-watchlist" title="Zbierz parametry i zapisz do pliku offer_list do automatycznego wyszukiwania co 1h">
+                <span class="btn-icon">📋</span>
+                <span class="btn-title">Dodaj do listy (auto co 1h)</span>
               </button>
             </div>
           </div>
@@ -164,6 +172,41 @@
             <button type="button" class="tag-btn" data-query="Steam Deck">Steam Deck</button>
           </div>
         </form>
+      </div>
+    </section>
+
+    <!-- Sekcja listy monitorowanych zapytań (Watchlist / offer_list.json) -->
+    <section id="watchlistSection" class="watchlist-section hidden">
+      <div class="section-container">
+        <div class="watchlist-header">
+          <div class="watchlist-heading-group">
+            <div class="badge-auto-pill">
+              <span class="pulse-dot"></span> AUTOMATYCZNE PRZESZUKIWANIE CO 1H
+            </div>
+            <h2 class="watchlist-title">📋 Monitorowane przedmioty (Watchlist)</h2>
+            <p class="watchlist-sub">
+              Przedmioty z pliku <code>offer_list.json</code> są przeszukiwane co godzinę.
+              Kliknij na wybrany przedmiot, aby wyświetlić jego aktualne oferty lub usuń go z automatycznego monitorowania.
+            </p>
+          </div>
+          <div class="watchlist-header-actions">
+            <button type="button" id="closeWatchlistBtn" class="btn btn-ghost" title="Ukryj panel monitorowania">
+              ✕ Zamknij podgląd
+            </button>
+          </div>
+        </div>
+
+        <!-- Siatka kart monitorowanych zapytań -->
+        <div id="watchlistCardsContainer" class="watchlist-grid">
+          <!-- Renderowane dynamicznie przez JS -->
+        </div>
+
+        <!-- Stan pustej listy monitorowania -->
+        <div id="watchlistEmptyState" class="empty-state watchlist-empty hidden">
+          <div class="empty-icon">📋</div>
+          <h3>Brak monitorowanych przedmiotów</h3>
+          <p>Wypełnij formularz powyżej i kliknij <strong>"Dodaj do listy (auto co 1h)"</strong>, a system będzie stale zbierał nowe oferty do pliku <code>offer_list.json</code>.</p>
+        </div>
       </div>
     </section>
 
@@ -194,6 +237,30 @@
     <!-- Sekcja wyników -->
     <main class="results-main">
       <div class="section-container">
+        <!-- Pasek informacyjny aktywnego monitorowanego zapytania -->
+        <div id="watchedSearchBanner" class="watched-search-banner hidden">
+          <div class="watched-banner-info">
+            <button type="button" id="backToWatchlistBtn" class="btn btn-sm btn-ghost back-btn">
+              ← Wróć do listy
+            </button>
+            <div class="watched-banner-details">
+              <span class="watched-badge-status">
+                <span class="pulse-dot"></span> Monitorowane co 1h
+              </span>
+              <h3 id="watchedSearchTitle" class="watched-banner-title">Switch 2</h3>
+              <span id="watchedSearchMeta" class="watched-banner-meta">Ostatnie sprawdzenie: przed chwilą</span>
+            </div>
+          </div>
+          <div class="watched-banner-actions">
+            <button type="button" id="refreshWatchedItemBtn" class="btn btn-sm btn-secondary" title="Wymuś odświeżenie ofert teraz">
+              🔄 Odśwież teraz
+            </button>
+            <button type="button" id="deleteWatchedItemBtn" class="btn btn-sm btn-danger-ghost" title="Usuń z automatycznego wyszukiwania">
+              🗑️ Usuń z listy
+            </button>
+          </div>
+        </div>
+
         <!-- Belka kontrolna wyników -->
         <div class="results-controls-bar">
           <div class="results-summary">

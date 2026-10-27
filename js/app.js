@@ -24,6 +24,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookmarkedOnlyBtn = document.getElementById('bookmarkedOnlyBtn');
   const bookmarkCountEl = document.getElementById('bookmarkCount');
 
+  // Elementy Watchlist (Monitorowane co 1h)
+  const addToWatchlistBtn = document.getElementById('addToWatchlistBtn');
+  const watchlistNavBtn = document.getElementById('watchlistNavBtn');
+  const watchlistSection = document.getElementById('watchlistSection');
+  const closeWatchlistBtn = document.getElementById('closeWatchlistBtn');
+  const watchlistCardsContainer = document.getElementById('watchlistCardsContainer');
+  const watchlistEmptyState = document.getElementById('watchlistEmptyState');
+  const watchlistCountEl = document.getElementById('watchlistCount');
+  const watchedSearchBanner = document.getElementById('watchedSearchBanner');
+  const backToWatchlistBtn = document.getElementById('backToWatchlistBtn');
+  const watchedSearchTitle = document.getElementById('watchedSearchTitle');
+  const watchedSearchMeta = document.getElementById('watchedSearchMeta');
+  const refreshWatchedItemBtn = document.getElementById('refreshWatchedItemBtn');
+  const deleteWatchedItemBtn = document.getElementById('deleteWatchedItemBtn');
+
   // Elementy sekcji Załaduj więcej
   const loadMoreSection = document.getElementById('loadMoreSection');
   const loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -53,6 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let isBookmarkedView = false;
   let bookmarkedIds = new Set();
 
+  // Stan Watchlist (obserwowane oferty co 1h)
+  let watchlistItems = [];
+  let activeWatchedItem = null;
+  let isWatchlistView = false;
+
   // Stan paginacji i parametrów bieżącego zapytania
   let currentPage = 1;
   let currentQuery = '';
@@ -70,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function init() {
     bindEvents();
+    loadWatchlist();
     if (queryInput.value.trim()) {
       executeSearch();
     } else {
@@ -92,13 +113,61 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function bindEvents() {
-    // Formularz wyszukiwania
+    // Formularz wyszukiwania (Tryb 1: Wyszukiwanie jednorazowe)
     searchForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      hideWatchedBanner();
       isBookmarkedView = false;
       bookmarkedOnlyBtn.classList.remove('active');
       executeSearch();
     });
+
+    // Tryb 2: Dodaj do listy automatycznego przeszukiwania (co 1h)
+    if (addToWatchlistBtn) {
+      addToWatchlistBtn.addEventListener('click', () => {
+        handleAddToWatchlist();
+      });
+    }
+
+    // Przycisk nawigacji do listy monitorowanych
+    if (watchlistNavBtn) {
+      watchlistNavBtn.addEventListener('click', () => {
+        toggleWatchlistView();
+      });
+    }
+
+    // Zamknięcie sekcji listy monitorowanych
+    if (closeWatchlistBtn) {
+      closeWatchlistBtn.addEventListener('click', () => {
+        toggleWatchlistView(false);
+      });
+    }
+
+    // Pasek aktywnego monitorowanego zapytania: powrót do listy
+    if (backToWatchlistBtn) {
+      backToWatchlistBtn.addEventListener('click', () => {
+        hideWatchedBanner();
+        toggleWatchlistView(true);
+      });
+    }
+
+    // Pasek aktywnego monitorowanego zapytania: odśwież teraz
+    if (refreshWatchedItemBtn) {
+      refreshWatchedItemBtn.addEventListener('click', () => {
+        if (activeWatchedItem) {
+          refreshWatchedItem(activeWatchedItem.id);
+        }
+      });
+    }
+
+    // Pasek aktywnego monitorowanego zapytania: usuń z listy
+    if (deleteWatchedItemBtn) {
+      deleteWatchedItemBtn.addEventListener('click', () => {
+        if (activeWatchedItem) {
+          deleteWatchedItem(activeWatchedItem.id);
+        }
+      });
+    }
 
     // Przycisk czyszczenia pola zapytania
     clearQueryBtn.addEventListener('click', () => {
@@ -110,6 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.tag-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         queryInput.value = btn.dataset.query;
+        hideWatchedBanner();
         executeSearch();
       });
     });
@@ -145,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Przełącznik "Zapisane"
     bookmarkedOnlyBtn.addEventListener('click', () => {
+      hideWatchedBanner();
       isBookmarkedView = !isBookmarkedView;
       bookmarkedOnlyBtn.classList.toggle('active', isBookmarkedView);
       if (isBookmarkedView) {
@@ -609,6 +680,322 @@ document.addEventListener('DOMContentLoaded', () => {
     emptyState.classList.remove('hidden');
     emptyState.querySelector('h3').textContent = 'Błąd pobierania ogłoszeń';
     emptyState.querySelector('p').textContent = msg;
+  }
+
+  // =========================================================================
+  // LOGIKA WATCHLIST / MONITOROWANE (AUTO CO 1H)
+  // =========================================================================
+
+  async function loadWatchlist() {
+    try {
+      const data = await API.getWatchlist();
+      watchlistItems = data.watchlist || [];
+      if (watchlistCountEl) {
+        watchlistCountEl.textContent = watchlistItems.length;
+      }
+      if (isWatchlistView) {
+        renderWatchlistCards();
+      }
+    } catch (err) {
+      console.error('Błąd pobierania listy monitorowanych:', err);
+    }
+  }
+
+  function renderWatchlistCards() {
+    if (!watchlistCardsContainer) return;
+    watchlistCardsContainer.innerHTML = '';
+
+    if (!watchlistItems || watchlistItems.length === 0) {
+      if (watchlistEmptyState) watchlistEmptyState.classList.remove('hidden');
+      return;
+    }
+
+    if (watchlistEmptyState) watchlistEmptyState.classList.add('hidden');
+
+    watchlistItems.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'watchlist-card';
+
+      const locText = item.location
+        ? `📍 ${escapeHTML(item.location)}${item.radius_km > 0 ? ' (+' + item.radius_km + ' km)' : ''}`
+        : '📍 Cała Polska';
+
+      let priceText = '';
+      if (item.min_price != null && item.max_price != null) {
+        priceText = `${item.min_price} - ${item.max_price} zł`;
+      } else if (item.min_price != null) {
+        priceText = `od ${item.min_price} zł`;
+      } else if (item.max_price != null) {
+        priceText = `do ${item.max_price} zł`;
+      }
+
+      const sources = Array.isArray(item.sources) ? item.sources : [];
+      const lastCheckFormatted = formatDate(item.last_checked_at);
+      const resultsCount = item.last_results_count != null ? item.last_results_count : '—';
+
+      card.innerHTML = `
+        <div>
+          <div class="watchlist-card-top">
+            <h4 class="watchlist-card-title" title="Kliknij, aby wyświetlić oferty">
+              <span>🔍 ${escapeHTML(item.title || item.query_text)}</span>
+            </h4>
+            <button type="button" class="watchlist-delete-btn" title="Usuń z wyszukiwarki automatycznej" data-id="${item.id}">
+              🗑️
+            </button>
+          </div>
+
+          <div class="watchlist-params-chips">
+            <span class="param-chip chip-location">${locText}</span>
+            ${priceText ? `<span class="param-chip chip-price">💰 ${priceText}</span>` : ''}
+            <span class="param-chip chip-sources">🌐 ${sources.length > 0 ? sources.join(', ') : 'Wszystkie serwisy'}</span>
+            ${item.search_in_description ? '<span class="param-chip">📝 Szukaj w opisie</span>' : ''}
+            <span class="param-chip" style="color: #34d399; border-color: rgba(52,211,153,0.3);">⏱️ Co 1h</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="watchlist-meta-row">
+            <span>🕒 Ostatnio: ${lastCheckFormatted}</span>
+            <span class="watchlist-offers-count">
+              📦 Oferty: ${resultsCount}
+            </span>
+          </div>
+
+          <div class="watchlist-card-actions">
+            <button type="button" class="btn-card-view" data-id="${item.id}">
+              <span>👁️ Pokaż oferty</span>
+            </button>
+            <button type="button" class="btn-card-refresh" data-id="${item.id}" title="Odśwież teraz w serwisach">
+              🔄
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Kliknięcie w tytuł lub przycisk "Pokaż oferty"
+      card.querySelector('.watchlist-card-title').addEventListener('click', () => openWatchedItemOffers(item));
+      card.querySelector('.btn-card-view').addEventListener('click', () => openWatchedItemOffers(item));
+
+      // Kliknięcie w odświeżenie
+      card.querySelector('.btn-card-refresh').addEventListener('click', (e) => {
+        e.stopPropagation();
+        refreshWatchedItem(item.id);
+      });
+
+      // Kliknięcie w usunięcie z listy
+      card.querySelector('.watchlist-delete-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteWatchedItem(item.id);
+      });
+
+      watchlistCardsContainer.appendChild(card);
+    });
+  }
+
+  async function handleAddToWatchlist() {
+    const query = queryInput.value.trim();
+    if (!query) {
+      queryInput.focus();
+      showToast('Wpisz szukaną frazę przed dodaniem do listy', 'error');
+      return;
+    }
+
+    const rawLocation = locationInput.value.trim();
+    const radiusVal = radiusSelect.value;
+    let effectiveLocation = rawLocation;
+    let effectiveRadius = radiusVal;
+
+    if (radiusVal === 'all' || !rawLocation) {
+      effectiveLocation = '';
+      effectiveRadius = 0;
+    } else {
+      effectiveRadius = parseInt(radiusVal, 10) || 0;
+    }
+
+    const searchInDescription = inDescCheckbox.checked;
+    const minPrice = minPriceInput.value ? parseFloat(minPriceInput.value) : null;
+    const maxPrice = maxPriceInput.value ? parseFloat(maxPriceInput.value) : null;
+
+    const selectedSources = Array.from(
+      document.querySelectorAll('input[name="source"]:checked')
+    ).map((cb) => {
+      const val = cb.value;
+      if (val === 'olx') return 'OLX';
+      if (val === 'allegro') return 'Allegro';
+      if (val === 'allegro_lokalnie') return 'Allegro Lokalnie';
+      if (val === 'facebook') return 'Facebook Marketplace';
+      return val;
+    });
+
+    try {
+      addToWatchlistBtn.disabled = true;
+      addToWatchlistBtn.style.opacity = '0.7';
+
+      await API.addToWatchlist({
+        title: query,
+        query: query,
+        location: effectiveLocation,
+        radius_km: effectiveRadius,
+        search_in_description: searchInDescription,
+        min_price: minPrice,
+        max_price: maxPrice,
+        sources: selectedSources,
+        sort_by: sortSelect.value,
+        interval_seconds: 3600,
+      });
+
+      showToast(`Dodano "${query}" do monitorowania co 1h! Zapisano w pliku offer_list.json.`, 'success');
+      await loadWatchlist();
+      toggleWatchlistView(true);
+    } catch (err) {
+      console.error('Błąd dodawania do monitorowania:', err);
+      showToast(`Błąd: ${err.message}`, 'error');
+    } finally {
+      addToWatchlistBtn.disabled = false;
+      addToWatchlistBtn.style.opacity = '1';
+    }
+  }
+
+  async function openWatchedItemOffers(item) {
+    activeWatchedItem = item;
+    toggleWatchlistView(false);
+
+    if (watchedSearchBanner) {
+      watchedSearchBanner.classList.remove('hidden');
+      if (watchedSearchTitle) watchedSearchTitle.textContent = item.title || item.query_text;
+      if (watchedSearchMeta) {
+        const loc = item.location ? item.location + (item.radius_km > 0 ? ' (+' + item.radius_km + ' km)' : '') : 'Cała Polska';
+        const lastCheck = formatDate(item.last_checked_at);
+        watchedSearchMeta.textContent = `Lokalizacja: ${loc} • Ostatnie sprawdzenie: ${lastCheck}`;
+      }
+    }
+
+    setLoadingState(true);
+    resultsHeading.textContent = `Monitorowane: ${item.title || item.query_text}`;
+    resultsSubheading.textContent = 'Pobieranie aktualnych ofert dla zapisanego zapytania...';
+
+    try {
+      const data = await API.getWatchlistOffers(item.id);
+      currentOffers = data.items || [];
+      updateResultsHeader(item.title || item.query_text, item.location, item.radius_km, currentOffers.length, 0);
+      updateSourceCountsFromOffers(currentOffers);
+      renderFilteredOffers();
+      resultsHeading.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      console.error('Błąd pobierania ofert z watchlisty:', err);
+      showErrorState('Nie udało się pobrać aktualnych ofert dla wybranego przedmiotu.');
+    } finally {
+      setLoadingState(false);
+    }
+  }
+
+  async function deleteWatchedItem(id) {
+    const item = watchlistItems.find((it) => it.id === id);
+    const title = item ? item.title : `ID ${id}`;
+    if (!confirm(`Czy na pewno chcesz usunąć "${title}" z wyszukiwarki automatycznej?`)) {
+      return;
+    }
+
+    try {
+      await API.deleteFromWatchlist(id);
+      showToast(`Usunięto "${title}" z automatycznego wyszukiwania.`);
+
+      if (activeWatchedItem && activeWatchedItem.id === id) {
+        hideWatchedBanner();
+        renderWelcomeState();
+      }
+
+      await loadWatchlist();
+      if (isWatchlistView) {
+        renderWatchlistCards();
+      }
+    } catch (err) {
+      console.error('Błąd usuwania:', err);
+      showToast(`Błąd usuwania: ${err.message}`, 'error');
+    }
+  }
+
+  async function refreshWatchedItem(id) {
+    const item = watchlistItems.find((it) => it.id === id);
+    const title = item ? item.title : `ID ${id}`;
+    showToast(`Odświeżam "${title}" w serwisach...`);
+
+    try {
+      const res = await API.refreshWatchlist(id);
+      await loadWatchlist();
+      showToast(`Zaktualizowano "${title}": znaleziono ${res.result?.results_count ?? 'nowe'} ofert.`);
+
+      if (activeWatchedItem && activeWatchedItem.id === id) {
+        const refreshedItem = watchlistItems.find((it) => it.id === id);
+        if (refreshedItem) {
+          openWatchedItemOffers(refreshedItem);
+        }
+      }
+    } catch (err) {
+      console.error('Błąd odświeżania:', err);
+      showToast(`Błąd odświeżania: ${err.message}`, 'error');
+    }
+  }
+
+  function toggleWatchlistView(show) {
+    if (typeof show === 'boolean') {
+      isWatchlistView = show;
+    } else {
+      isWatchlistView = !isWatchlistView;
+    }
+
+    if (watchlistSection) {
+      watchlistSection.classList.toggle('hidden', !isWatchlistView);
+      if (isWatchlistView) {
+        renderWatchlistCards();
+        watchlistSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    if (watchlistNavBtn) {
+      watchlistNavBtn.classList.toggle('active', isWatchlistView);
+    }
+  }
+
+  function hideWatchedBanner() {
+    activeWatchedItem = null;
+    if (watchedSearchBanner) {
+      watchedSearchBanner.classList.add('hidden');
+    }
+  }
+
+  function formatDate(isoStr) {
+    if (!isoStr) return 'Oczekuje na sprawdzenie';
+    try {
+      const date = new Date(isoStr);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMinutes = Math.floor(diffMs / 60000);
+
+      if (diffMinutes < 1) return 'przed chwilą';
+      if (diffMinutes < 60) return `${diffMinutes} min temu`;
+
+      const hours = String(date.getHours()).padStart(2, '0');
+      const mins = String(date.getMinutes()).padStart(2, '0');
+      return `dziś o ${hours}:${mins}`;
+    } catch (_) {
+      return isoStr;
+    }
+  }
+
+  function showToast(msg, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type === 'error' ? 'toast-error' : 'toast-success'}`;
+    toast.innerHTML = `
+      <span>${type === 'error' ? '⚠️' : '✅'}</span>
+      <span>${escapeHTML(msg)}</span>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(20px)';
+      setTimeout(() => toast.remove(), 400);
+    }, 4000);
   }
 
   function escapeHTML(str) {
