@@ -67,29 +67,32 @@
 
             <div class="input-group location-group">
               <label for="locationInput">
-                <span class="label-icon">📍</span> Lokalizacja / Miasto
+                <span class="label-icon">📍</span> Punkt startowy / Miasto
               </label>
               <div class="input-wrapper">
                 <input 
                   type="text" 
                   id="locationInput" 
                   name="location" 
-                  placeholder="np. Warszawa, Kraków (lub puste)" 
+                  placeholder="np. Poznań, Wrocław, Warszawa (lub puste)" 
                 >
               </div>
             </div>
 
             <div class="input-group radius-group">
               <label for="radiusSelect">
-                <span class="label-icon">📏</span> Promień obszaru
+                <span class="label-icon">📏</span> Obszar poszukiwań
               </label>
               <select id="radiusSelect" name="radius">
-                <option value="0">+0 km (Tylko miasto)</option>
+                <option value="all" selected>Cała Polska (cały kraj)</option>
+                <option value="0">+0 km (Tylko wybrane miasto)</option>
+                <option value="5">+5 km</option>
                 <option value="10">+10 km</option>
-                <option value="25" selected>+25 km</option>
+                <option value="15">+15 km</option>
+                <option value="25">+25 km</option>
                 <option value="50">+50 km</option>
+                <option value="75">+75 km</option>
                 <option value="100">+100 km</option>
-                <option value="0">Cała Polska</option>
               </select>
             </div>
           </div>
@@ -246,6 +249,16 @@
         <!-- Kontener siatki ofert -->
         <div id="offersContainer" class="offers-grid">
           <!-- Oferty renderowane dynamicznie przez JS -->
+        </div>
+
+        <!-- Sekcja ładowania kolejnych stron (Załaduj więcej) -->
+        <div id="loadMoreSection" class="load-more-section hidden">
+          <button type="button" id="loadMoreBtn" class="btn btn-secondary btn-load-more">
+            <span class="btn-spinner hidden" id="loadMoreSpinner"></span>
+            <span class="btn-icon" id="loadMoreIcon">⚡</span>
+            <span class="btn-text" id="loadMoreText">Załaduj więcej ofert</span>
+          </button>
+          <p id="loadMoreStatus" class="load-more-status">Pobierz kolejne strony wyników ze wszystkich wybranych serwisów</p>
         </div>
 
         <!-- Stan pusty / brak wyników -->

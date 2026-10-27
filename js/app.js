@@ -24,6 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookmarkedOnlyBtn = document.getElementById('bookmarkedOnlyBtn');
   const bookmarkCountEl = document.getElementById('bookmarkCount');
 
+  // Elementy sekcji Załaduj więcej
+  const loadMoreSection = document.getElementById('loadMoreSection');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const loadMoreSpinner = document.getElementById('loadMoreSpinner');
+  const loadMoreIcon = document.getElementById('loadMoreIcon');
+  const loadMoreText = document.getElementById('loadMoreText');
+  const loadMoreStatus = document.getElementById('loadMoreStatus');
+
   // Liczniki w pigułkach źródeł
   const countAllEl = document.getElementById('count-all');
   const countOlxEl = document.getElementById('count-olx');
@@ -44,6 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeSourceFilter = 'ALL';
   let isBookmarkedView = false;
   let bookmarkedIds = new Set();
+
+  // Stan paginacji i parametrów bieżącego zapytania
+  let currentPage = 1;
+  let currentQuery = '';
+  let currentLocation = '';
+  let currentRadius = 'all';
+  let currentInDesc = true;
+  let currentMinPrice = null;
+  let currentMaxPrice = null;
+  let currentSources = [];
+  let hasMoreOffers = true;
+  let isLoadingMore = false;
 
   // Inicjalizacja
   init();
@@ -134,6 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Przycisk "Załaduj więcej ofert"
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', () => {
+        executeLoadMore();
+      });
+    }
+
     // Zamknięcie modalu
     const modal = document.getElementById('offerModal');
     const closeBtn = document.getElementById('closeModalBtn');
@@ -155,8 +182,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const location = locationInput.value.trim();
-    const radius = parseInt(radiusSelect.value, 10);
+    const rawLocation = locationInput.value.trim();
+    const radiusVal = radiusSelect.value;
+
+    // Logika obszaru:
+    // Wpisanie miasta daje punkt startowy, a obok wybierany jest obszar (+0km, +5km, Cała Polska).
+    // Jeśli wybrano "all" (Cała Polska) LUB miasto jest puste -> szukamy w całej Polsce!
+    // Przykład: Poznań + Cała Polska = Cała Polska
+    // Przykład: Wrocław + 100km = Wrocław + 100km
+    let effectiveLocation = rawLocation;
+    let effectiveRadius = radiusVal;
+
+    if (radiusVal === 'all' || !rawLocation) {
+      effectiveLocation = '';
+      effectiveRadius = 'all';
+    }
+
     const searchInDescription = inDescCheckbox.checked;
     const minPrice = minPriceInput.value ? parseFloat(minPriceInput.value) : null;
     const maxPrice = maxPriceInput.value ? parseFloat(maxPriceInput.value) : null;
@@ -166,33 +207,139 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('input[name="source"]:checked')
     ).map((cb) => cb.value);
 
+    // Zapamiętanie bieżących parametrów na potrzeby paginacji ("Załaduj więcej")
+    currentPage = 1;
+    currentQuery = query;
+    currentLocation = effectiveLocation;
+    currentRadius = effectiveRadius;
+    currentInDesc = searchInDescription;
+    currentMinPrice = minPrice;
+    currentMaxPrice = maxPrice;
+    currentSources = selectedSources;
+    hasMoreOffers = true;
+    isLoadingMore = false;
+
     // Aktualizacja UI na stan wyszukiwania
     setLoadingState(true);
     resetStatusBadges('Wyszukiwanie...');
+    if (loadMoreSection) {
+      loadMoreSection.classList.add('hidden');
+    }
 
     try {
       const data = await API.searchMarketplaces({
-        query,
-        location,
-        radius,
-        searchInDescription,
-        minPrice,
-        maxPrice,
-        sources: selectedSources,
+        query: currentQuery,
+        location: currentLocation,
+        radius: currentRadius,
+        searchInDescription: currentInDesc,
+        minPrice: currentMinPrice,
+        maxPrice: currentMaxPrice,
+        sources: currentSources,
         sortBy: sortSelect.value,
+        page: 1,
       });
 
       currentOffers = data.items || [];
       updateStatusBadges(data.scraper_statuses || []);
-      updateResultsHeader(query, location, radius, data.total_count, data.latency_ms);
-      updateSourceCounts(data.stats_by_source || {});
+      updateResultsHeader(currentQuery, currentLocation, currentRadius, currentOffers.length, data.latency_ms);
+      updateSourceCountsFromOffers(currentOffers);
       sortCurrentOffers(sortSelect.value);
       renderFilteredOffers();
+
+      // Obsługa sekcji "Załaduj więcej"
+      if (loadMoreSection) {
+        if (currentOffers.length > 0) {
+          loadMoreSection.classList.remove('hidden');
+          loadMoreBtn.disabled = false;
+          loadMoreBtn.classList.remove('disabled');
+          loadMoreText.textContent = 'Załaduj więcej ofert';
+          loadMoreStatus.textContent = `Pobrano ${currentOffers.length} ogłoszeń (strona ${currentPage}). Kliknij, aby załadować kolejne oferty.`;
+        } else {
+          loadMoreSection.classList.add('hidden');
+        }
+      }
     } catch (err) {
       console.error('Błąd wyszukiwania:', err);
       showErrorState(err.message || 'Wystąpił błąd podczas odpytywania serwisów.');
     } finally {
       setLoadingState(false);
+    }
+  }
+
+  /**
+   * Paginacja - pobiera kolejne oferty ze wszystkich serwisów ("Załaduj więcej")
+   */
+  async function executeLoadMore() {
+    if (isLoadingMore || !hasMoreOffers) return;
+
+    isLoadingMore = true;
+    setLoadMoreLoading(true);
+
+    const nextPage = currentPage + 1;
+
+    try {
+      const data = await API.searchMarketplaces({
+        query: currentQuery,
+        location: currentLocation,
+        radius: currentRadius,
+        searchInDescription: currentInDesc,
+        minPrice: currentMinPrice,
+        maxPrice: currentMaxPrice,
+        sources: currentSources,
+        sortBy: sortSelect.value,
+        page: nextPage,
+      });
+
+      const newItems = data.items || [];
+      if (newItems.length > 0) {
+        // Deduplikacja nowych ofert po URL i ID
+        const existingUrls = new Set(currentOffers.map((o) => o.url));
+        const uniqueNew = newItems.filter((o) => !existingUrls.has(o.url));
+
+        if (uniqueNew.length > 0) {
+          currentOffers = currentOffers.concat(uniqueNew);
+          currentPage = nextPage;
+          sortCurrentOffers(sortSelect.value);
+          renderFilteredOffers();
+          updateResultsHeader(currentQuery, currentLocation, currentRadius, currentOffers.length, data.latency_ms);
+          updateSourceCountsFromOffers(currentOffers);
+          loadMoreStatus.textContent = `Pobrano ${uniqueNew.length} nowych ofert (strona ${currentPage}). Łącznie: ${currentOffers.length} ogłoszeń.`;
+        } else {
+          hasMoreOffers = false;
+          loadMoreStatus.textContent = 'Brak dalszych nowych ogłoszeń w wybranych serwisach.';
+          loadMoreBtn.disabled = true;
+          loadMoreBtn.classList.add('disabled');
+          loadMoreText.textContent = 'Załadowano wszystkie oferty';
+        }
+      } else {
+        hasMoreOffers = false;
+        loadMoreStatus.textContent = 'Dotarto do końca wyników wyszukiwania.';
+        loadMoreBtn.disabled = true;
+        loadMoreBtn.classList.add('disabled');
+        loadMoreText.textContent = 'Załadowano wszystkie oferty';
+      }
+    } catch (err) {
+      console.error('Błąd ładowania kolejnych ofert:', err);
+      loadMoreStatus.textContent = `Błąd ładowania kolejnej strony: ${err.message || 'Spróbuj ponownie'}`;
+    } finally {
+      isLoadingMore = false;
+      setLoadMoreLoading(false);
+    }
+  }
+
+  function setLoadMoreLoading(loading) {
+    if (loading) {
+      loadMoreSpinner.classList.remove('hidden');
+      loadMoreIcon.classList.add('hidden');
+      loadMoreBtn.disabled = true;
+      loadMoreText.textContent = 'Wczytywanie kolejnych ofert...';
+    } else {
+      loadMoreSpinner.classList.add('hidden');
+      loadMoreIcon.classList.remove('hidden');
+      if (hasMoreOffers) {
+        loadMoreBtn.disabled = false;
+        loadMoreText.textContent = 'Załaduj więcej ofert';
+      }
     }
   }
 
@@ -229,12 +376,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (s.status === 'OK') {
             info.textContent = `✓ ${s.count} ofert (${s.latency_ms}ms)`;
             info.style.color = 'var(--accent-emerald)';
-          } else if (s.status === 'FALLBACK') {
-            info.textContent = `⚡ ${s.count} ofert (demo)`;
-            info.style.color = 'var(--accent-cyan)';
+            card.removeAttribute('title');
+          } else if (s.status === 'WARNING') {
+            info.textContent = `⚠ ${s.message || 'Ochrona DataDome'}`;
+            info.style.color = 'var(--accent-amber)';
+            card.title = s.message || 'Allegro.pl jest chronione przez DataDome. Skorzystaj z Allegro Lokalnie lub dodaj bezpłatny klucz API w config.py.';
           } else {
             info.textContent = `✕ Błąd (${s.status})`;
             info.style.color = 'var(--accent-rose)';
+            if (s.message) card.title = s.message;
           }
         }
       }
@@ -243,8 +393,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateResultsHeader(query, location, radius, totalCount, latencyMs) {
     resultsHeading.textContent = `Wyniki dla: "${query}"`;
-    const locText = location ? `${location} (+${radius} km)` : 'Cała Polska';
-    resultsSubheading.textContent = `Znaleziono ${totalCount} ogłoszeń w obszarze ${locText} (${latencyMs}ms)`;
+    let locText = 'Cała Polska';
+    if (radius === 'all' || !location) {
+      locText = 'Cała Polska (cały kraj)';
+    } else if (radius === '0' || radius === 0) {
+      locText = `${location} (tylko miasto)`;
+    } else {
+      locText = `${location} (+${radius} km)`;
+    }
+    resultsSubheading.textContent = `Znaleziono ${totalCount} ogłoszeń w obszarze: ${locText} (${latencyMs}ms)`;
   }
 
   function updateSourceCounts(stats) {
@@ -254,6 +411,23 @@ document.addEventListener('DOMContentLoaded', () => {
     countAllegroEl.textContent = stats['Allegro'] || 0;
     countAllokEl.textContent = stats['Allegro Lokalnie'] || 0;
     countFbEl.textContent = stats['Facebook Marketplace'] || 0;
+  }
+
+  function updateSourceCountsFromOffers(offers) {
+    const stats = {
+      'OLX': 0,
+      'Allegro': 0,
+      'Allegro Lokalnie': 0,
+      'Facebook Marketplace': 0,
+    };
+    offers.forEach((o) => {
+      if (stats[o.source] !== undefined) {
+        stats[o.source]++;
+      } else {
+        stats[o.source] = 1;
+      }
+    });
+    updateSourceCounts(stats);
   }
 
   function sortCurrentOffers(sortBy) {

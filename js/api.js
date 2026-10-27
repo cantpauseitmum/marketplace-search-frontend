@@ -34,12 +34,13 @@ const API = {
   async searchMarketplaces({
     query,
     location = '',
-    radius = 25,
+    radius = 'all',
     searchInDescription = true,
     minPrice = null,
     maxPrice = null,
     sources = [],
     sortBy = 'newest',
+    page = 1,
   }) {
     const params = new URLSearchParams();
     params.append('q', query);
@@ -50,6 +51,7 @@ const API = {
     if (maxPrice) params.append('max_price', maxPrice);
     if (sources && sources.length > 0) params.append('sources', sources.join(','));
     if (sortBy) params.append('sort_by', sortBy);
+    if (page && page > 1) params.append('page', page);
 
     const response = await fetch(`${this.baseUrl}/api/search?${params.toString()}`);
     if (!response.ok) {
