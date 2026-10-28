@@ -50,14 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Liczniki w pigułkach źródeł
   const countAllEl = document.getElementById('count-all');
   const countOlxEl = document.getElementById('count-olx');
-  const countAllegroEl = document.getElementById('count-allegro');
   const countAllokEl = document.getElementById('count-allok');
   const countFbEl = document.getElementById('count-fb');
 
   // Karty statusu źródeł
   const statusCards = {
     'OLX': document.getElementById('status-olx'),
-    'Allegro': document.getElementById('status-allegro'),
     'Allegro Lokalnie': document.getElementById('status-allegro-lokalnie'),
     'Facebook Marketplace': document.getElementById('status-facebook'),
   };
@@ -106,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="font-size: 3rem; margin-bottom: 1rem;">🔎</div>
         <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">Wpisz czego szukasz</h3>
         <p style="color: var(--text-secondary); max-width: 520px; margin: 0 auto 1.5rem; font-size: 0.95rem; line-height: 1.6;">
-          Podaj dowolną frazę (np. telefon, konsola, rower) w polu wyszukiwania powyżej, opcjonalnie podaj miasto i kliknij <strong>Przeszukaj serwisy</strong>, aby przeszukać OLX, Allegro, Allegro Lokalnie i Facebook Marketplace w jednym miejscu.
+          Podaj dowolną frazę (np. telefon, konsola, rower) w polu wyszukiwania powyżej, opcjonalnie podaj miasto i kliknij <strong>Przeszukaj serwisy</strong>, aby przeszukać OLX, Allegro Lokalnie i Facebook Marketplace w jednym miejscu.
         </p>
       </div>
     `;
@@ -449,9 +447,9 @@ document.addEventListener('DOMContentLoaded', () => {
             info.style.color = 'var(--accent-emerald)';
             card.removeAttribute('title');
           } else if (s.status === 'WARNING') {
-            info.textContent = `⚠ ${s.message || 'Ochrona DataDome'}`;
+            info.textContent = `⚠ ${s.message || 'Ostrzeżenie'}`;
             info.style.color = 'var(--accent-amber)';
-            card.title = s.message || 'Allegro.pl jest chronione przez DataDome. Skorzystaj z Allegro Lokalnie lub dodaj bezpłatny klucz API w config.py.';
+            card.title = s.message || 'Wystąpiło ostrzeżenie podczas pobierania ofert z tego źródła.';
           } else {
             info.textContent = `✕ Błąd (${s.status})`;
             info.style.color = 'var(--accent-rose)';
@@ -479,7 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const total = Object.values(stats).reduce((a, b) => a + b, 0);
     countAllEl.textContent = total;
     countOlxEl.textContent = stats['OLX'] || 0;
-    countAllegroEl.textContent = stats['Allegro'] || 0;
     countAllokEl.textContent = stats['Allegro Lokalnie'] || 0;
     countFbEl.textContent = stats['Facebook Marketplace'] || 0;
   }
@@ -487,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSourceCountsFromOffers(offers) {
     const stats = {
       'OLX': 0,
-      'Allegro': 0,
       'Allegro Lokalnie': 0,
       'Facebook Marketplace': 0,
     };
@@ -608,7 +604,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function getSourceBadgeClass(source) {
     switch (source) {
       case 'OLX': return 'badge-olx';
-      case 'Allegro': return 'badge-allegro';
       case 'Allegro Lokalnie': return 'badge-allok';
       case 'Facebook Marketplace': return 'badge-facebook';
       default: return 'badge-olx';
@@ -821,7 +816,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ).map((cb) => {
       const val = cb.value;
       if (val === 'olx') return 'OLX';
-      if (val === 'allegro') return 'Allegro';
       if (val === 'allegro_lokalnie') return 'Allegro Lokalnie';
       if (val === 'facebook') return 'Facebook Marketplace';
       return val;

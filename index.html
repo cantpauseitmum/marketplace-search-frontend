@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MarketplaceSearch - OLX, Allegro, Allegro Lokalnie, FB Marketplace</title>
-  <meta name="description" content="Scentralizowana wyszukiwarka ofert z OLX, Allegro, Allegro Lokalnie oraz Facebook Marketplace w jednym miejscu.">
+  <title>MarketplaceSearch - OLX, Allegro Lokalnie, FB Marketplace</title>
+  <meta name="description" content="Scentralizowana wyszukiwarka ofert z OLX, Allegro Lokalnie oraz Facebook Marketplace w jednym miejscu.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
           </div>
           <div>
             <h1 class="brand-title">Marketplace<span>Search</span></h1>
-            <p class="brand-subtitle">OLX • Allegro • Allegro Lokalnie • FB Marketplace</p>
+            <p class="brand-subtitle">OLX • Allegro Lokalnie • FB Marketplace</p>
           </div>
         </div>
 
@@ -40,7 +40,7 @@
           </button>
           <div class="status-indicator">
             <span class="status-dot"></span>
-            <span class="status-text">4 serwisy aktywne</span>
+            <span class="status-text">3 serwisy aktywne</span>
           </div>
         </div>
       </div>
@@ -111,12 +111,6 @@
                   <input type="checkbox" name="source" value="olx" checked>
                   <span class="chip-label">
                     <span class="badge-dot"></span> OLX
-                  </span>
-                </label>
-                <label class="source-chip chip-allegro">
-                  <input type="checkbox" name="source" value="allegro" checked>
-                  <span class="chip-label">
-                    <span class="badge-dot"></span> Allegro
                   </span>
                 </label>
                 <label class="source-chip chip-allok">
@@ -218,10 +212,6 @@
             <span class="src-badge badge-olx">OLX</span>
             <span class="src-info">Gotowy do zapytań</span>
           </div>
-          <div class="source-status-card" id="status-allegro">
-            <span class="src-badge badge-allegro">Allegro</span>
-            <span class="src-info">Gotowy do zapytań</span>
-          </div>
           <div class="source-status-card" id="status-allegro-lokalnie">
             <span class="src-badge badge-allok">Allegro Lokalnie</span>
             <span class="src-info">Gotowy do zapytań</span>
@@ -273,7 +263,6 @@
             <div class="source-filter-pills" id="sourceFilterPills">
               <button class="pill active" data-source="ALL">Wszystkie (<span id="count-all">0</span>)</button>
               <button class="pill pill-olx" data-source="OLX">OLX (<span id="count-olx">0</span>)</button>
-              <button class="pill pill-allegro" data-source="Allegro">Allegro (<span id="count-allegro">0</span>)</button>
               <button class="pill pill-allok" data-source="Allegro Lokalnie">All. Lokalnie (<span id="count-allok">0</span>)</button>
               <button class="pill pill-fb" data-source="Facebook Marketplace">Facebook (<span id="count-fb">0</span>)</button>
             </div>
@@ -340,7 +329,7 @@
           <div class="scanner-anim">
             <div class="scanner-line"></div>
           </div>
-          <p class="loading-text">Odpytywanie serwisów OLX, Allegro, Allegro Lokalnie i Facebook Marketplace...</p>
+          <p class="loading-text">Odpytywanie serwisów OLX, Allegro Lokalnie i Facebook Marketplace...</p>
         </div>
       </div>
     </main>
@@ -349,7 +338,7 @@
     <footer class="app-footer">
       <div class="footer-container">
         <p>MarketplaceSearch • Aplikacja do agregacji ogłoszeń z polskich serwisów aukcyjnych</p>
-        <p class="footer-sub">OLX • Allegro • Allegro Lokalnie • Facebook Marketplace</p>
+        <p class="footer-sub">OLX • Allegro Lokalnie • Facebook Marketplace</p>
       </div>
     </footer>
   </div>
